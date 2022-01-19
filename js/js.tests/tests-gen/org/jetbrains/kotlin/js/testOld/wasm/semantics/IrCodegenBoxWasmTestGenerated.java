@@ -17556,6 +17556,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 runTest("compiler/testData/codegen/box/inlineClasses/sealed/equalsDeep4.kt");
             }
 
+            @TestMetadata("is.kt")
+            public void testIs() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/sealed/is.kt");
+            }
+
             @TestMetadata("object.kt")
             public void testObject() throws Exception {
                 runTest("compiler/testData/codegen/box/inlineClasses/sealed/object.kt");
