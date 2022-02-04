@@ -62,9 +62,10 @@ internal abstract class JvmValueClassAbstractLowering(val context: JvmBackendCon
             val irConstructor = declaration.primaryConstructor!!
             // The field getter is used by reflection and cannot be removed here unless it is internal.
             declaration.declarations.removeIf {
-                it == irConstructor || (it is IrFunction && it.isSpecificFieldGetter() && !it.visibility.isPublicAPI)
+                (it == irConstructor && declaration.modality != Modality.SEALED) ||
+                        (it is IrFunction && it.isSpecificFieldGetter() && !it.visibility.isPublicAPI)
             }
-            if (declaration.modality != Modality.SEALED) {
+            if (declaration.modality != Modality.SEALED && !declaration.isChildOfSealedInlineClass()) {
                 buildPrimaryValueClassConstructor(declaration, irConstructor)
                 buildBoxFunction(declaration)
                 buildUnboxFunctions(declaration)
