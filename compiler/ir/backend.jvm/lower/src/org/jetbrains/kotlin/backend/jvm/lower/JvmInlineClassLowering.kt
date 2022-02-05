@@ -78,6 +78,8 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
         }
 
         if (declaration.modality == Modality.SEALED) {
+            patchReceiverParameterOfValueGetter(declaration)
+
             val inlineSubclasses = collectSubclasses(declaration) { it.owner.isInline }
             val inlineDirectSubclasses = declaration.sealedSubclasses.filter { it.owner.isInline }
             val noinlineSubclasses = collectSubclasses(declaration) { !it.owner.isInline }
@@ -90,7 +92,10 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
         }
     }
 
-    private fun IrClass.isChildOfSealedInlineClass(): Boolean = superTypes.any { it.isInlineClassType() }
+    private fun patchReceiverParameterOfValueGetter(irClass: IrClass) {
+        val getter = irClass.functions.single { it.name == InlineClassAbi.sealedInlineClassFieldName }
+        getter.dispatchReceiverParameter = irClass.thisReceiver?.copyTo(getter, type = irClass.defaultType)
+    }
 
     private fun updateGetterForSealedInlineClassChild(irClass: IrClass) {
         val fieldGetter = irClass.functions.find { it.isInlineClassFieldGetter } ?: error("${irClass.render()} has no getter")
@@ -122,12 +127,15 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
         )
 
         fakeOverride.overriddenSymbols += methodToOverride.symbol
+        fakeOverride.dispatchReceiverParameter = irClass.thisReceiver?.copyTo(fakeOverride, type = irClass.defaultType)
 
         irClass.addMember(fakeOverride)
 
         with(context.createIrBuilder(fieldGetter.symbol)) {
             fieldGetter.body = irExprBody(
-                irCall(fakeOverride.symbol)
+                irCall(fakeOverride.symbol).apply {
+                    dispatchReceiver = irGet(fieldGetter.dispatchReceiverParameter!!)
+                }
             )
         }
     }
