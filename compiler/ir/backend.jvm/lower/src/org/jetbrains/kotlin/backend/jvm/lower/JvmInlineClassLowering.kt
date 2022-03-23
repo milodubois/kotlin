@@ -603,7 +603,11 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
             // since the underlying representations are the same.
             expression.symbol.owner.isInlineClassFieldGetter -> {
                 val arg = expression.dispatchReceiver!!.transform(this, null)
-                coerceInlineClasses(arg, expression.symbol.owner.dispatchReceiverParameter!!.type, expression.type)
+                val type =
+                    if (expression.symbol.owner.parentAsClass.isChildOfSealedInlineClass() && expression.type.isPrimitiveType())
+                        expression.type.makeNullable()
+                    else expression.type
+                coerceInlineClasses(arg, expression.symbol.owner.dispatchReceiverParameter!!.type, type)
             }
             // Specialize calls to equals when the left argument is a value of inline class type.
             expression.isSpecializedInlineClassEqEq -> {
@@ -637,9 +641,13 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
         if (field.origin == IrDeclarationOrigin.PROPERTY_BACKING_FIELD &&
             parent is IrClass &&
             parent.isInline &&
-            field.name == parent.inlineClassFieldName) {
+            field.name == parent.inlineClassFieldName
+        ) {
             val receiver = expression.receiver!!.transform(this, null)
-            return coerceInlineClasses(receiver, receiver.type, field.type)
+            val type =
+                if (field.parentAsClass.isChildOfSealedInlineClass() && field.type.isPrimitiveType()) field.type.makeNullable()
+                else field.type
+            return coerceInlineClasses(receiver, receiver.type, type)
         }
         return super.visitGetField(expression)
     }

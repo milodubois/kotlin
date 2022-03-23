@@ -20013,6 +20013,12 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
                     }
 
                     @Test
+                    @TestMetadata("inlineClassPrimitive.kt")
+                    public void testInlineClassPrimitive() throws Exception {
+                        runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/returnType/inlineClassPrimitive.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
+                    }
+
+                    @Test
                     @TestMetadata("object.kt")
                     public void testObject() throws Exception {
                         runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/returnType/object.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());

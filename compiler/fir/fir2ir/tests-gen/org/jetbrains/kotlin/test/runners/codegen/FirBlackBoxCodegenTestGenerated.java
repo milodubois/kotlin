@@ -25459,6 +25459,12 @@ public class FirBlackBoxCodegenTestGenerated extends AbstractFirBlackBoxCodegenT
                     }
 
                     @Test
+                    @TestMetadata("inlineClassPrimitive.kt")
+                    public void testInlineClassPrimitive() throws Exception {
+                        runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/returnType/inlineClassPrimitive.kt", TransformersFunctions.getReplaceOptionalJvmInlineAnnotationWithReal());
+                    }
+
+                    @Test
                     @TestMetadata("object.kt")
                     public void testObject() throws Exception {
                         runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/returnType/object.kt", TransformersFunctions.getReplaceOptionalJvmInlineAnnotationWithReal());
