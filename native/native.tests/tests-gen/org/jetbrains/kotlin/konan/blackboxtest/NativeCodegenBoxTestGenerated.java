@@ -22552,6 +22552,8 @@ public class NativeCodegenBoxTestGenerated extends AbstractNativeCodegenBoxTest 
                     public Casts() {
                         register("compiler/testData/codegen/box/inlineClasses/sealed/casts/class.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
                         register("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClass.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
+                        register("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClassNullable.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
+                        register("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClassPrimitive.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
                         register("compiler/testData/codegen/box/inlineClasses/sealed/casts/interface.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
                         register("compiler/testData/codegen/box/inlineClasses/sealed/casts/object.kt", TransformersFunctions.getRemoveOptionalJvmInlineAnnotation());
                     }
@@ -22573,6 +22575,20 @@ public class NativeCodegenBoxTestGenerated extends AbstractNativeCodegenBoxTest 
                     public void testInlineClass() throws Exception {
                         // There is a registered source transformer for the testcase: TransformersFunctions.getRemoveOptionalJvmInlineAnnotation()
                         runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClass.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("inlineClassNullable.kt")
+                    public void testInlineClassNullable() throws Exception {
+                        // There is a registered source transformer for the testcase: TransformersFunctions.getRemoveOptionalJvmInlineAnnotation()
+                        runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClassNullable.kt");
+                    }
+
+                    @Test
+                    @TestMetadata("inlineClassPrimitive.kt")
+                    public void testInlineClassPrimitive() throws Exception {
+                        // There is a registered source transformer for the testcase: TransformersFunctions.getRemoveOptionalJvmInlineAnnotation()
+                        runTest("compiler/testData/codegen/box/inlineClasses/sealed/casts/inlineClassPrimitive.kt");
                     }
 
                     @Test
