@@ -965,7 +965,9 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
             }
 
             if (addToClass) {
-                info.top.addMember(function)
+                if (methodSymbol.owner.modality != Modality.ABSTRACT) {
+                    info.top.addMember(function)
+                }
 
                 if (retargets.any { (_, retarget) ->
                         retarget.owner.parentAsClass.let { it.isInline && it.modality == Modality.SEALED }
@@ -996,6 +998,8 @@ private class JvmInlineClassLowering(context: JvmBackendContext) : JvmValueClass
                 }
             }
         }
+
+        info.top.declarations.removeIf { it is IrSimpleFunction && it.modality == Modality.ABSTRACT }
     }
 
     private fun buildUnboxFunction(irClass: IrClass) {
@@ -1163,7 +1167,7 @@ private class SealedInlineClassInfo(
                 visited += method.symbol
                 val retargets = mutableMapOf<IrClassSymbol, IrSimpleFunctionSymbol>()
                 colorChildren(top, method.symbol, method.symbol, retargets, visited)
-                res += MethodInfo(method.symbol, retargets, addToClass = false)
+                res += MethodInfo(method.symbol, retargets, addToClass = method.modality == Modality.ABSTRACT)
             }
 
             // Methods, declared in children
