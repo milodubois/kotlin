@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.fir.FirVisibilityChecker
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.utils.isInfix
 import org.jetbrains.kotlin.fir.declarations.utils.isOperator
@@ -542,9 +541,6 @@ internal object CheckVisibility : CheckerStage() {
 }
 
 internal object CheckLowPriorityInOverloadResolution : CheckerStage() {
-    private val LOW_PRIORITY_IN_OVERLOAD_RESOLUTION_CLASS_ID: ClassId =
-        ClassId(FqName("kotlin.internal"), Name.identifier("LowPriorityInOverloadResolution"))
-
     override suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext) {
         val annotations = when (val fir = candidate.symbol.fir) {
             is FirSimpleFunction -> fir.annotations
@@ -553,12 +549,7 @@ internal object CheckLowPriorityInOverloadResolution : CheckerStage() {
             else -> return
         }
 
-        val hasLowPriorityAnnotation = annotations.any {
-            val lookupTag = it.annotationTypeRef.coneTypeSafe<ConeClassLikeType>()?.lookupTag ?: return@any false
-            lookupTag.classId == LOW_PRIORITY_IN_OVERLOAD_RESOLUTION_CLASS_ID
-        }
-
-        if (hasLowPriorityAnnotation) {
+        if (hasLowPriorityAnnotation(annotations)) {
             sink.reportDiagnostic(ResolvedWithLowPriority)
         }
     }

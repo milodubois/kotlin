@@ -25,7 +25,7 @@ class FirPackageMemberScope(
     val session: FirSession,
     private val symbolProvider: FirSymbolProvider = session.symbolProvider
 ) : FirScope() {
-    private val classifierCache: MutableMap<Name, FirClassifierSymbol<*>?> = mutableMapOf()
+    private val classifierCache: MutableMap<Name, List<FirClassifierSymbol<*>>> = mutableMapOf()
     private val functionCache: MutableMap<Name, List<FirNamedFunctionSymbol>> = mutableMapOf()
     private val propertyCache: MutableMap<Name, List<FirPropertySymbol>> = mutableMapOf()
 
@@ -35,13 +35,27 @@ class FirPackageMemberScope(
     ) {
         if (name.asString().isEmpty()) return
 
-        val symbol = classifierCache.getOrPut(name) {
+        val symbols = classifierCache.getOrPut(name) {
             val unambiguousFqName = ClassId(fqName, name)
-            symbolProvider.getClassLikeSymbolByClassId(unambiguousFqName)
+            symbolProvider.getClassLikeSymbolsByClassId(unambiguousFqName)
         }
 
-        if (symbol != null) {
-            processor(symbol, ConeSubstitutor.Empty)
+        if (symbols.isNotEmpty()) {
+            processor(symbols.first(), ConeSubstitutor.Empty)
+        }
+    }
+
+    // Specific implementation only for conflict checkers
+    fun processClassifiersByNameWithConflicts(name: Name, processor: (FirClassifierSymbol<*>) -> Unit) {
+        if (name.asString().isEmpty()) return
+
+        val symbols = classifierCache.getOrPut(name) {
+            val unambiguousFqName = ClassId(fqName, name)
+            symbolProvider.getClassLikeSymbolsByClassId(unambiguousFqName)
+        }
+
+        symbols.forEach { symbol ->
+            processor(symbol)
         }
     }
 

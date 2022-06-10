@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.name.Name
 
 @ThreadSafeMutableState
 open class FirDependenciesSymbolProviderImpl(session: FirSession) : FirDependenciesSymbolProvider(session) {
-    private val classCache = session.firCachesFactory.createCache(::computeClass)
+    private val classCache = session.firCachesFactory.createCache(::computeClasses)
     private val topLevelCallableCache = session.firCachesFactory.createCache(::computeTopLevelCallables)
     private val topLevelFunctionCache = session.firCachesFactory.createCache(::computeTopLevelFunctions)
     private val topLevelPropertyCache = session.firCachesFactory.createCache(::computeTopLevelProperties)
@@ -76,17 +76,17 @@ open class FirDependenciesSymbolProviderImpl(session: FirSession) : FirDependenc
         return result
     }
 
-    @OptIn(FirSymbolProviderInternals::class, ExperimentalStdlibApi::class)
+    @OptIn(FirSymbolProviderInternals::class)
     private fun computeTopLevelCallables(callableId: CallableId): List<FirCallableSymbol<*>> = buildList {
         dependencyProviders.forEach { it.getTopLevelCallableSymbolsTo(this, callableId.packageName, callableId.callableName) }
     }
 
-    @OptIn(FirSymbolProviderInternals::class, ExperimentalStdlibApi::class)
+    @OptIn(FirSymbolProviderInternals::class)
     private fun computeTopLevelFunctions(callableId: CallableId): List<FirNamedFunctionSymbol> = buildList {
         dependencyProviders.forEach { it.getTopLevelFunctionSymbolsTo(this, callableId.packageName, callableId.callableName) }
     }
 
-    @OptIn(FirSymbolProviderInternals::class, ExperimentalStdlibApi::class)
+    @OptIn(FirSymbolProviderInternals::class)
     private fun computeTopLevelProperties(callableId: CallableId): List<FirPropertySymbol> = buildList {
         dependencyProviders.forEach { it.getTopLevelPropertySymbolsTo(this, callableId.packageName, callableId.callableName) }
     }
@@ -94,8 +94,8 @@ open class FirDependenciesSymbolProviderImpl(session: FirSession) : FirDependenc
     private fun computePackage(it: FqName): FqName? =
         dependencyProviders.firstNotNullOfOrNull { provider -> provider.getPackage(it) }
 
-    private fun computeClass(classId: ClassId): FirClassLikeSymbol<*>? =
-        dependencyProviders.firstNotNullOfOrNull { provider -> provider.getClassLikeSymbolByClassId(classId) }
+    private fun computeClasses(classId: ClassId): List<FirClassLikeSymbol<*>> =
+        dependencyProviders.flatMap { provider -> provider.getClassLikeSymbolsByClassId(classId) }
 
 
     @FirSymbolProviderInternals
@@ -118,6 +118,10 @@ open class FirDependenciesSymbolProviderImpl(session: FirSession) : FirDependenc
     }
 
     override fun getClassLikeSymbolByClassId(classId: ClassId): FirClassLikeSymbol<*>? {
+        return classCache.getValue(classId).firstOrNull()
+    }
+
+    override fun getClassLikeSymbolsByClassId(classId: ClassId): List<FirClassLikeSymbol<*>> {
         return classCache.getValue(classId)
     }
 

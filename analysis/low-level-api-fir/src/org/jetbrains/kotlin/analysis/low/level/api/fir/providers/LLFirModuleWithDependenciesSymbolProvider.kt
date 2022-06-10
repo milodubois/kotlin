@@ -27,6 +27,10 @@ internal class LLFirModuleWithDependenciesSymbolProvider(
         getClassLikeSymbolByFqNameWithoutDependencies(classId)
             ?: dependencyProvider.getClassLikeSymbolByClassId(classId)
 
+    override fun getClassLikeSymbolsByClassId(classId: ClassId): List<FirClassLikeSymbol<*>> {
+        return providers.flatMap { provider -> provider.getClassLikeSymbolsByClassId(classId) }.takeIf { it.isNotEmpty() }
+            ?: dependencyProvider.getClassLikeSymbolsByClassId(classId)
+    }
 
     fun getClassLikeSymbolByFqNameWithoutDependencies(classId: ClassId): FirClassLikeSymbol<*>? =
         providers.firstNotNullOfOrNull { it.getClassLikeSymbolByClassId(classId) }
