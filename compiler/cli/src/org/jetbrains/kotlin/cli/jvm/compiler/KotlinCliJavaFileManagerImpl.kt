@@ -40,6 +40,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.resolve.jvm.KotlinCliJavaFileManager
 import org.jetbrains.kotlin.util.PerformanceCounter
 import org.jetbrains.kotlin.utils.addIfNotNull
+import java.io.FileNotFoundException
 import java.util.*
 
 // TODO: do not inherit from CoreJavaFileManager to avoid accidental usage of its methods which do not use caches/indices
@@ -122,7 +123,13 @@ class KotlinCliJavaFileManagerImpl(private val myPsiManager: PsiManager) : CoreJ
                 }
 
                 // Here, we assume the class is top-level
-                val classContent = classFileContentFromRequest ?: virtualFile.contentsToByteArray()
+                val classContent = classFileContentFromRequest ?: try {
+                    virtualFile.contentsToByteArray()
+                } catch (e: FileNotFoundException) {
+                    // In IC-environment sometimes we can delete CoreLocalVirtualFile,
+                    // which leads to an exception from its contentsToByteArray
+                    return@getOrPut null
+                }
                 if (virtualFile.nameWithoutExtension.contains("$") && isNotTopLevelClass(classContent)) return@getOrPut null
 
                 val resolver = ClassifierResolutionContext { findClass(it, allScope) }
