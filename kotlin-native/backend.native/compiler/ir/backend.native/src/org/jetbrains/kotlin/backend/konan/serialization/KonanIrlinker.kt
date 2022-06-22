@@ -597,8 +597,8 @@ internal class KonanIrLinker(
             return cenumsProvider.getDeclaration(descriptor, idSig, file, symbolKind).symbol
         }
 
-        override fun deserializeIrSymbol(idSig: IdSignature, symbolKind: BinarySymbolData.SymbolKind): IrSymbol {
-            val descriptor = descriptorByIdSignatureFinder.findDescriptorBySignature(idSig) ?: error("Expecting descriptor for $idSig")
+        override fun tryDeserializeIrSymbol(idSig: IdSignature, symbolKind: BinarySymbolData.SymbolKind): IrSymbol? {
+            val descriptor = descriptorByIdSignatureFinder.findDescriptorBySignature(idSig) ?: return null
             // If library is cached we don't need to create an IrClass for struct or enum.
             if (!isLibraryCached && descriptor.isCEnumsOrCStruct()) return resolveCEnumsOrStruct(descriptor, idSig, symbolKind)
 
@@ -606,6 +606,8 @@ internal class KonanIrLinker(
 
             return symbolOwner.symbol
         }
+
+        override fun deserializedSymbolNotFound(idSig: IdSignature): Nothing = error("No descriptor found for $idSig")
 
         override val moduleFragment: IrModuleFragment = KonanIrModuleFragmentImpl(moduleDescriptor, builtIns)
         override val moduleDependencies: Collection<IrModuleDeserializer> = listOfNotNull(forwardDeclarationDeserializer)
@@ -635,6 +637,8 @@ internal class KonanIrLinker(
             return (stubGenerator.generateMemberStub(descriptor) as IrSymbolOwner).symbol
         }
 
+        override fun deserializedSymbolNotFound(idSig: IdSignature): Nothing = error("No descriptor found for $idSig")
+
         private val inlineFunctionReferences by lazy {
             cachedLibraries.getLibraryCache(klib)!!.serializedInlineFunctionBodies.associateBy {
                 fileDeserializationStates[it.file].declarationDeserializer.symbolDeserializer.deserializeIdSignature(it.functionSignature)
@@ -646,7 +650,7 @@ internal class KonanIrLinker(
         fun deserializeInlineFunction(function: IrFunction): InlineFunctionOriginInfo {
             val packageFragment = function.getPackageFragment() as? IrExternalPackageFragment
                     ?: error("Expected an external package fragment for ${function.render()}")
-            if (function.parents.any { (it as? IrFunction)?.isInline == true}) {
+            if (function.parents.any { (it as? IrFunction)?.isInline == true }) {
                 // Already deserialized by the top-most inline function.
                 return InlineFunctionOriginInfo(
                         function,
@@ -707,7 +711,12 @@ internal class KonanIrLinker(
                     parameter.defaultValue = declarationDeserializer.deserializeExpressionBody(defaultValueIndex)
             }
 
+            unlinkedDeclarationsSupport.markUsedClassifiersExcludingUnlinkedFromFakeOverrideBuilding(fakeOverrideBuilder)
+            unlinkedDeclarationsSupport.markUsedClassifiersInInlineLazyIrFunction(function)
+
             fakeOverrideBuilder.provideFakeOverrides()
+
+            unlinkedDeclarationsSupport.processUnlinkedDeclarations(linker.messageLogger) { listOf(function) }
 
             inlineFunctionFiles[packageFragment]?.let {
                 require(it == fileDeserializationState.file) {
@@ -801,10 +810,10 @@ internal class KonanIrLinker(
 
         override fun contains(idSig: IdSignature): Boolean = idSig.isForwardDeclarationSignature()
 
-        private fun resolveDescriptor(idSig: IdSignature): ClassDescriptor =
+        private fun resolveDescriptor(idSig: IdSignature): ClassDescriptor? =
                 with(idSig as IdSignature.CommonSignature) {
                     val classId = ClassId(packageFqName(), FqName(declarationFqName), false)
-                    moduleDescriptor.findClassAcrossModuleDependencies(classId) ?: error("No declaration found with $idSig")
+                    moduleDescriptor.findClassAcrossModuleDependencies(classId)
                 }
 
         private fun buildForwardDeclarationStub(descriptor: ClassDescriptor): IrClass {
@@ -813,11 +822,11 @@ internal class KonanIrLinker(
             }
         }
 
-        override fun deserializeIrSymbol(idSig: IdSignature, symbolKind: BinarySymbolData.SymbolKind): IrSymbol {
+        override fun tryDeserializeIrSymbol(idSig: IdSignature, symbolKind: BinarySymbolData.SymbolKind): IrSymbol? {
             require(symbolKind == BinarySymbolData.SymbolKind.CLASS_SYMBOL) {
                 "Only class could be a Forward declaration $idSig (kind $symbolKind)"
             }
-            val descriptor = resolveDescriptor(idSig)
+            val descriptor = resolveDescriptor(idSig) ?: return null
             val actualModule = descriptor.module
             if (actualModule !== moduleDescriptor) {
                 val moduleDeserializer = resolveModuleDeserializer(actualModule, idSig)
@@ -827,6 +836,8 @@ internal class KonanIrLinker(
 
             return declaredDeclaration.getOrPut(idSig) { buildForwardDeclarationStub(descriptor) }.symbol
         }
+
+        override fun deserializedSymbolNotFound(idSig: IdSignature): Nothing = error("No descriptor found for $idSig")
 
         override val moduleFragment: IrModuleFragment = KonanIrModuleFragmentImpl(moduleDescriptor, builtIns)
         override val moduleDependencies: Collection<IrModuleDeserializer> = emptyList()

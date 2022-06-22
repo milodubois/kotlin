@@ -380,7 +380,7 @@ fun getIrModuleInfoForKlib(
     val irBuiltIns = IrBuiltInsOverDescriptors(moduleDescriptor.builtIns, typeTranslator, symbolTable)
 
     val allowUnboundSymbols = configuration[JSConfigurationKeys.PARTIAL_LINKAGE] ?: false
-    val unlinkedDeclarationsSupport = JsUnlinkedDeclarationsSupport(allowUnboundSymbols)
+    val unlinkedDeclarationsSupport = JsUnlinkedDeclarationsSupport(irBuiltIns, allowUnboundSymbols)
 
     val irLinker = JsIrLinker(
         currentModule = null,
@@ -439,7 +439,7 @@ fun getIrModuleInfoForSourceFiles(
     }
 
     val allowUnboundSymbols = configuration[JSConfigurationKeys.PARTIAL_LINKAGE] ?: false
-    val unlinkedDeclarationsSupport = JsUnlinkedDeclarationsSupport(allowUnboundSymbols)
+    val unlinkedDeclarationsSupport = JsUnlinkedDeclarationsSupport(irBuiltIns, allowUnboundSymbols)
 
     val irLinker = JsIrLinker(
         currentModule = psi2IrContext.moduleDescriptor,
