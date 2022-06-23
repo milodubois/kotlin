@@ -15,6 +15,7 @@ import java.io.File
 import javax.inject.Inject
 
 abstract class YarnLockCopyTask : DefaultTask() {
+
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputFile: RegularFileProperty
@@ -45,8 +46,11 @@ abstract class YarnLockCopyTask : DefaultTask() {
 }
 
 abstract class YarnLockStoreTask : YarnLockCopyTask() {
+    @get:Internal
+    abstract val yarnLockMismatchReportService: Property<YarnLockMismatchReportService>
+
     @Input
-    var mismatchReport: YarnLockMismatchReport = YarnLockMismatchReport.ERROR
+    var mismatchReport: YarnLockMismatchReport = YarnLockMismatchReport.FAIL_AFTER_BUILD
 
     @Input
     var reportNewYarnLock: Boolean = false

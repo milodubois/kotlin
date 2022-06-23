@@ -5,12 +5,12 @@
 
 package org.jetbrains.kotlin.gradle.targets.js.yarn
 
-import org.apache.commons.io.FileUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.TaskProvider
+import org.jetbrains.kotlin.gradle.plugin.BuildEventsListenerRegistryHolder
 import org.jetbrains.kotlin.gradle.targets.js.MultiplePluginDeclarationDetector
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootPlugin
 import org.jetbrains.kotlin.gradle.targets.js.npm.RequiresNpmDependencies
@@ -72,11 +72,19 @@ open class YarnPlugin : Plugin<Project> {
             it.dependsOn(packageJsonUmbrella)
         }
 
+        val service = project.gradle.sharedServices
+            .registerIfAbsent("kotlin-store-yarn-lock-mismatch-reporter", YarnLockMismatchReportService::class.java) {}
+
+        BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry
+            .onTaskCompletion(service)
+
         val storeYarnLock = tasks.register("kotlinStoreYarnLock", YarnLockStoreTask::class.java) { task ->
             task.dependsOn(kotlinNpmInstall)
             task.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
             task.outputDirectory.set(yarnRootExtension.lockFileDirectory)
             task.fileName.set(yarnRootExtension.lockFileName)
+
+            task.yarnLockMismatchReportService.set(service)
 
             var shouldReportMismatch = false
 
@@ -97,10 +105,12 @@ open class YarnPlugin : Plugin<Project> {
                     when (task.mismatchReport) {
                         YarnLockMismatchReport.NONE -> {}
                         YarnLockMismatchReport.WARNING -> {
-                            task.logger.warn("yarn.lock was changed")
+                            task.logger.warn(YARN_LOCK_MISMATCH_MESSAGE)
                         }
-                        YarnLockMismatchReport.ERROR -> throw GradleException("yarn.lock was changed")
-                        YarnLockMismatchReport.FAIL_AFTER_BUILD -> TODO()
+                        YarnLockMismatchReport.ERROR -> throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
+                        YarnLockMismatchReport.FAIL_AFTER_BUILD -> {
+                            task.yarnLockMismatchReportService.get().failOnClose()
+                        }
                     }
                 }
             }
