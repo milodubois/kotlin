@@ -50,7 +50,7 @@ abstract class YarnLockStoreTask : YarnLockCopyTask() {
     abstract val yarnLockMismatchReportService: Property<YarnLockMismatchReportService>
 
     @Input
-    var mismatchReport: YarnLockMismatchReport = YarnLockMismatchReport.FAIL_AFTER_BUILD
+    var mismatchReport: YarnLockMismatchReport = YarnLockMismatchReport.ERROR
 
     @Input
     var reportNewYarnLock: Boolean = false
