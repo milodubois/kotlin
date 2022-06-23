@@ -20,8 +20,10 @@ internal fun syncKotlinAndAndroidSourceSets(target: KotlinAndroidTarget) {
     val project = target.project
     val android = project.extensions.getByName("android") as BaseExtension
 
+    val createdKotlinSourceSets = mutableSetOf<String>()
     android.sourceSets.all { androidSourceSet ->
         val kotlinSourceSetName = kotlinSourceSetNameForAndroidSourceSet(target, androidSourceSet.name)
+        createdKotlinSourceSets.add(kotlinSourceSetName)
         val kotlinSourceSet = project.kotlinExtension.sourceSets.maybeCreate(kotlinSourceSetName)
         androidSourceSet.addKotlinSources(kotlinSourceSet)
 
@@ -32,6 +34,22 @@ internal fun syncKotlinAndAndroidSourceSets(target: KotlinAndroidTarget) {
         ifKaptEnabled(project) {
             Kapt3GradleSubplugin.createAptConfigurationIfNeeded(project, androidSourceSet.name)
         }
+    }
+
+    val androidVariantSourceSetNames = mutableSetOf<String>()
+    target.compilations.all { compilation ->
+        androidVariantSourceSetNames.add(compilation.defaultSourceSetName)
+        compilation.androidVariant.sourceSets.all {
+            androidVariantSourceSetNames.add(kotlinSourceSetNameForAndroidSourceSet(target, it.name))
+        }
+    }
+
+    // Removing KotlinSource sets that are not present in Android variants
+    // AGP could create 'AndroidSourceSet' without corresponding variant that does not participate in
+    // any compilation
+    project.whenEvaluated {
+        val kotlinSourceSetNamesToRemove = createdKotlinSourceSets.subtract(androidVariantSourceSetNames)
+        kotlinExtension.sourceSets.removeIf { it.name in kotlinSourceSetNamesToRemove }
     }
 }
 
