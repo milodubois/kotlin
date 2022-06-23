@@ -5,6 +5,8 @@
 
 package org.jetbrains.kotlin.gradle.targets.js.yarn
 
+import org.apache.commons.io.FileUtils
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePlugin
@@ -17,6 +19,7 @@ import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.RootPackageJsonTask
 import org.jetbrains.kotlin.gradle.tasks.CleanDataTask
 import org.jetbrains.kotlin.gradle.tasks.registerTask
+import org.jetbrains.kotlin.gradle.utils.contentEquals
 
 open class YarnPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
@@ -69,11 +72,38 @@ open class YarnPlugin : Plugin<Project> {
             it.dependsOn(packageJsonUmbrella)
         }
 
-        val storeYarnLock = tasks.register("kotlinStoreYarnLock", YarnLockCopyTask::class.java) {
-            it.dependsOn(kotlinNpmInstall)
-            it.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
-            it.outputDirectory.set(yarnRootExtension.lockFileDirectory)
-            it.fileName.set(yarnRootExtension.lockFileName)
+        val storeYarnLock = tasks.register("kotlinStoreYarnLock", YarnLockStoreTask::class.java) { task ->
+            task.dependsOn(kotlinNpmInstall)
+            task.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
+            task.outputDirectory.set(yarnRootExtension.lockFileDirectory)
+            task.fileName.set(yarnRootExtension.lockFileName)
+
+            var shouldReportMismatch = false
+
+            task.doFirst {
+                val outputFile = task.outputDirectory.get().asFile.resolve(task.fileName.get())
+
+                if (!outputFile.exists()) {
+                    shouldReportMismatch = task.reportNewYarnLock
+                    return@doFirst
+                }
+
+                shouldReportMismatch =
+                    task.mismatchReport != YarnLockMismatchReport.NONE && !contentEquals(task.inputFile.get().asFile, outputFile)
+            }
+
+            task.doLast {
+                if (shouldReportMismatch) {
+                    when (task.mismatchReport) {
+                        YarnLockMismatchReport.NONE -> {}
+                        YarnLockMismatchReport.WARNING -> {
+                            task.logger.warn("yarn.lock was changed")
+                        }
+                        YarnLockMismatchReport.ERROR -> throw GradleException("yarn.lock was changed")
+                        YarnLockMismatchReport.FAIL_AFTER_BUILD -> TODO()
+                    }
+                }
+            }
         }
 
         val restoreYarnLock = tasks.register("kotlinRestoreYarnLock", YarnLockCopyTask::class.java) {

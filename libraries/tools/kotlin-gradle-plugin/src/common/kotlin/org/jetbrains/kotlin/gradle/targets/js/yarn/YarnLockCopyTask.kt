@@ -43,3 +43,18 @@ abstract class YarnLockCopyTask : DefaultTask() {
         }
     }
 }
+
+abstract class YarnLockStoreTask : YarnLockCopyTask() {
+    @Input
+    var mismatchReport: YarnLockMismatchReport = YarnLockMismatchReport.ERROR
+
+    @Input
+    var reportNewYarnLock: Boolean = false
+}
+
+enum class YarnLockMismatchReport {
+    NONE,
+    WARNING,
+    ERROR,
+    FAIL_AFTER_BUILD,
+}
