@@ -30,4 +30,4 @@ abstract class YarnLockMismatchReportService : BuildService<BuildServiceParamete
     }
 }
 
-internal val YARN_LOCK_MISMATCH_MESSAGE = "yarn.lock was changed"
+val YARN_LOCK_MISMATCH_MESSAGE = "yarn.lock was changed"

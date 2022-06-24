@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.gradle.targets.js.npm.NpmProject
 import org.jetbrains.kotlin.gradle.targets.js.npm.NpmProjectModules
 import org.jetbrains.kotlin.gradle.targets.js.npm.PackageJson
 import org.jetbrains.kotlin.gradle.targets.js.npm.fromSrcPackageJson
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YARN_LOCK_MISMATCH_MESSAGE
 import org.jetbrains.kotlin.gradle.tasks.USING_JS_INCREMENTAL_COMPILATION_MESSAGE
 import org.jetbrains.kotlin.gradle.tasks.USING_JS_IR_BACKEND_MESSAGE
 import org.jetbrains.kotlin.gradle.testbase.*
@@ -1215,6 +1216,129 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             )
             buildAndFail("nodeTest") {
                 assertTasksFailed(":nodeTest")
+            }
+        }
+    }
+
+    @DisplayName("Failing with yarn.lock update")
+    @GradleTest
+    fun testFailingWithYarnLockUpdate(gradleVersion: GradleVersion) {
+        project("kotlin-js-yarn-lock-project", gradleVersion) {
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+            }
+
+            projectPath.resolve("kotlin-js-store").deleteRecursively()
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.reportNewYarnLock = true
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksFailed(":kotlinStoreYarnLock")
+            }
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        dependencies {
+                            implementation(npm("decamelize", "6.0.0"))
+                        }
+                            
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.ERROR
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksFailed(":kotlinStoreYarnLock")
+            }
+
+            buildGradleKts.modify {
+                val replaced = it.replace("implementation(npm(\"decamelize\", \"6.0.0\"))", "")
+                replaced + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.WARNING
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
+            }
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        dependencies {
+                            implementation(npm("decamelize", "6.0.0"))
+                        }
+                            
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
+            }
+
+            buildGradleKts.modify {
+                val replaced = it.replace("implementation(npm(\"decamelize\", \"6.0.0\"))", "")
+                replaced + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL_AFTER_BUILD
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
+            }
+
+            projectPath.resolve("kotlin-js-store").deleteRecursively()
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
+                                this.reportNewYarnLock = true
+                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
+                            }
+                        }
+                        """.trimIndent()
+            }
+
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
             }
         }
     }
