@@ -95,6 +95,12 @@ open class YarnPlugin : Plugin<Project> {
             task.yarnLockAutoReplace = provider { yarnRootExtension.requireConfigured().yarnLockAutoReplace }
         }
 
+        tasks.register("kotlinActualizeYarnLock", YarnLockCopyTask::class.java) { task ->
+            task.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
+            task.outputDirectory.set(yarnRootExtension.lockFileDirectory)
+            task.fileName.set(yarnRootExtension.lockFileName)
+        }
+
         val restoreYarnLock = tasks.register("kotlinRestoreYarnLock", YarnLockCopyTask::class.java) {
             val lockFile = yarnRootExtension.lockFileDirectory.resolve(yarnRootExtension.lockFileName)
             it.inputFile.set(yarnRootExtension.lockFileDirectory.resolve(yarnRootExtension.lockFileName))

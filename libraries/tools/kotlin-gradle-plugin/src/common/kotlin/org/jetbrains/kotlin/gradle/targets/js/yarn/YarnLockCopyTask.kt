@@ -81,7 +81,7 @@ abstract class YarnLockStoreTask : YarnLockCopyTask() {
                 }
                 YarnLockMismatchReport.FAIL -> throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
                 YarnLockMismatchReport.FAIL_AFTER_BUILD -> {
-//                    yarnLockMismatchReportService.get().failOnClose()
+                    yarnLockMismatchReportService.get().failOnClose()
                 }
                 else -> error("Unknown yarn.lock mismatch report kind")
             }

@@ -1266,6 +1266,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 assertTasksFailed(":kotlinStoreYarnLock")
             }
 
+            build("kotlinActualizeYarnLock") {
+                assertTasksExecuted(":kotlinActualizeYarnLock")
+            }
+
             buildGradleKts.modify {
                 val replaced = it.replace("implementation(npm(\"decamelize\", \"6.0.0\"))", "")
                 replaced + "\n" +
@@ -1281,6 +1285,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 assertTasksExecuted(":kotlinStoreYarnLock")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
+            }
+
+            build("kotlinActualizeYarnLock") {
+                assertTasksExecuted(":kotlinActualizeYarnLock")
             }
 
             buildGradleKts.modify {
@@ -1303,6 +1311,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
+            build("kotlinActualizeYarnLock") {
+                assertTasksExecuted(":kotlinActualizeYarnLock")
+            }
+
             buildGradleKts.modify {
                 val replaced = it.replace("implementation(npm(\"decamelize\", \"6.0.0\"))", "")
                 replaced + "\n" +
@@ -1321,7 +1333,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksUpToDate(":kotlinStoreYarnLock")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
@@ -1349,6 +1361,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             buildGradleKts.modify {
                 it + "\n" +
                         """
+                        dependencies {
+                            implementation(npm("decamelize", "6.0.0"))
+                        }
+                            
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
                             rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
                                 org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL
@@ -1368,7 +1384,8 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildGradleKts.modify {
-                it + "\n" +
+                val replaced = it.replace("implementation(npm(\"decamelize\", \"6.0.0\"))", "")
+                replaced + "\n" +
                         """
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
                             rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
@@ -1378,12 +1395,14 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksFailed(":kotlinStoreYarnLock")
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
             //yarn.lock was updated
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksUpToDate(":kotlinStoreYarnLock")
             }
         }
     }

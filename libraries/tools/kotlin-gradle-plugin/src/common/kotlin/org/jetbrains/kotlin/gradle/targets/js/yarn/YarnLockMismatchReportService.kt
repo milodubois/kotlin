@@ -16,6 +16,9 @@ import org.jetbrains.kotlin.gradle.utils.contentEquals
 
 abstract class YarnLockMismatchReportService : BuildService<YarnLockMismatchReportService.Params>, AutoCloseable,
     OperationCompletionListener {
+    @Volatile
+    private var shouldFailOnClose: Boolean = false
+
     // Some parameters for the web server
     internal interface Params : BuildServiceParameters {
         val inputFile: RegularFileProperty
@@ -23,15 +26,19 @@ abstract class YarnLockMismatchReportService : BuildService<YarnLockMismatchRepo
         val shouldFailOnClose: Property<Boolean>
     }
 
+    fun failOnClose() {
+        shouldFailOnClose = true
+    }
+
     override fun onFinish(event: FinishEvent?) {
         // noop
     }
 
     override fun close() {
-        if (parameters.shouldFailOnClose.get() && !contentEquals(parameters.inputFile.get().asFile, parameters.outputFile.get().asFile)) {
+        if (shouldFailOnClose || parameters.shouldFailOnClose.get() && !contentEquals(parameters.inputFile.get().asFile, parameters.outputFile.get().asFile)) {
             throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
         }
     }
 }
 
-val YARN_LOCK_MISMATCH_MESSAGE = "yarn.lock was changed"
+val YARN_LOCK_MISMATCH_MESSAGE = "yarn.lock was changed. Run `kotlinActualizeYarnLock` task to actualize yarn.lock file"
