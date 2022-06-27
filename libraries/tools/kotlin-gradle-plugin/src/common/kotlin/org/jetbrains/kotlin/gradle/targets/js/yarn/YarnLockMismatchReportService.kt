@@ -24,6 +24,7 @@ abstract class YarnLockMismatchReportService : BuildService<YarnLockMismatchRepo
         val inputFile: RegularFileProperty
         val outputFile: RegularFileProperty
         val shouldFailOnClose: Property<Boolean>
+        val reportNewYarnLock: Property<Boolean>
     }
 
     fun failOnClose() {
@@ -35,6 +36,14 @@ abstract class YarnLockMismatchReportService : BuildService<YarnLockMismatchRepo
     }
 
     override fun close() {
+        if (!parameters.inputFile.get().asFile.exists()) {
+            return
+        }
+
+        if (!parameters.reportNewYarnLock.get() || parameters.outputFile.get().asFile.exists()) {
+            return
+        }
+
         if (shouldFailOnClose || parameters.shouldFailOnClose.get() && !contentEquals(parameters.inputFile.get().asFile, parameters.outputFile.get().asFile)) {
             throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
         }

@@ -77,6 +77,9 @@ open class YarnPlugin : Plugin<Project> {
                 it.parameters.shouldFailOnClose.set(
                     provider { yarnRootExtension.requireConfigured().yarnLockMismatchReport == YarnLockMismatchReport.FAIL_AFTER_BUILD }
                 )
+                it.parameters.reportNewYarnLock.set(
+                    provider { yarnRootExtension.requireConfigured().reportNewYarnLock }
+                )
             }
 
         BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry
