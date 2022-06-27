@@ -1234,9 +1234,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 it + "\n" +
                         """
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.reportNewYarnLock = true
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().reportNewYarnLock = true
                         }
                         """.trimIndent()
             }
@@ -1253,13 +1251,17 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                         }
                             
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.ERROR
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport = 
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL
                         }
                         """.trimIndent()
             }
 
+            buildAndFail("compileKotlinJs") {
+                assertTasksFailed(":kotlinStoreYarnLock")
+            }
+
+            // yarn.lock was not updated
             buildAndFail("compileKotlinJs") {
                 assertTasksFailed(":kotlinStoreYarnLock")
             }
@@ -1269,9 +1271,8 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 replaced + "\n" +
                         """
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.WARNING
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.WARNING
                         }
                         """.trimIndent()
             }
@@ -1290,9 +1291,8 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                         }
                             
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
                         }
                         """.trimIndent()
             }
@@ -1308,11 +1308,16 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 replaced + "\n" +
                         """
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL_AFTER_BUILD
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL_AFTER_BUILD
                         }
                         """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+
+                assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
             buildAndFail("compileKotlinJs") {
@@ -1327,10 +1332,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 it + "\n" +
                         """
                         rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
-                            tasks.named<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockStoreTask>("kotlinStoreYarnLock") {
-                                this.reportNewYarnLock = true
-                                this.mismatchReport = org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
-                            }
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.NONE
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().reportNewYarnLock =
+                                true
                         }
                         """.trimIndent()
             }
@@ -1339,6 +1344,46 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                 assertTasksExecuted(":kotlinStoreYarnLock")
 
                 assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
+            }
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockAutoReplace = 
+                                true
+                        }
+                        """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksFailed(":kotlinStoreYarnLock")
+            }
+
+            //yarn.lock was updated
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
+            }
+
+            buildGradleKts.modify {
+                it + "\n" +
+                        """
+                        rootProject.plugins.withType(org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin::class.java) {
+                            rootProject.the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().yarnLockMismatchReport =
+                                org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport.FAIL_AFTER_BUILD
+                        }
+                        """.trimIndent()
+            }
+
+            buildAndFail("compileKotlinJs") {
+                assertTasksFailed(":kotlinStoreYarnLock")
+            }
+
+            //yarn.lock was updated
+            build("compileKotlinJs") {
+                assertTasksExecuted(":kotlinStoreYarnLock")
             }
         }
     }

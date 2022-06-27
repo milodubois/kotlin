@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.gradle.targets.js.yarn
 
-import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.BasePlugin
@@ -19,7 +18,6 @@ import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.RootPackageJsonTask
 import org.jetbrains.kotlin.gradle.tasks.CleanDataTask
 import org.jetbrains.kotlin.gradle.tasks.registerTask
-import org.jetbrains.kotlin.gradle.utils.contentEquals
 
 open class YarnPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
@@ -73,7 +71,13 @@ open class YarnPlugin : Plugin<Project> {
         }
 
         val service = project.gradle.sharedServices
-            .registerIfAbsent("kotlin-store-yarn-lock-mismatch-reporter", YarnLockMismatchReportService::class.java) {}
+            .registerIfAbsent("kotlin-store-yarn-lock-mismatch-reporter", YarnLockMismatchReportService::class.java) {
+                it.parameters.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
+                it.parameters.outputFile.set(yarnRootExtension.lockFileDirectory.resolve(yarnRootExtension.lockFileName))
+                it.parameters.shouldFailOnClose.set(
+                    provider { yarnRootExtension.requireConfigured().yarnLockMismatchReport == YarnLockMismatchReport.FAIL_AFTER_BUILD }
+                )
+            }
 
         BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry
             .onTaskCompletion(service)
@@ -86,34 +90,9 @@ open class YarnPlugin : Plugin<Project> {
 
             task.yarnLockMismatchReportService.set(service)
 
-            var shouldReportMismatch = false
-
-            task.doFirst {
-                val outputFile = task.outputDirectory.get().asFile.resolve(task.fileName.get())
-
-                if (!outputFile.exists()) {
-                    shouldReportMismatch = task.reportNewYarnLock
-                    return@doFirst
-                }
-
-                shouldReportMismatch =
-                    task.mismatchReport != YarnLockMismatchReport.NONE && !contentEquals(task.inputFile.get().asFile, outputFile)
-            }
-
-            task.doLast {
-                if (shouldReportMismatch) {
-                    when (task.mismatchReport) {
-                        YarnLockMismatchReport.NONE -> {}
-                        YarnLockMismatchReport.WARNING -> {
-                            task.logger.warn(YARN_LOCK_MISMATCH_MESSAGE)
-                        }
-                        YarnLockMismatchReport.ERROR -> throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
-                        YarnLockMismatchReport.FAIL_AFTER_BUILD -> {
-                            task.yarnLockMismatchReportService.get().failOnClose()
-                        }
-                    }
-                }
-            }
+            task.yarnLockMismatchReport = provider { yarnRootExtension.requireConfigured().yarnLockMismatchReport }
+            task.reportNewYarnLock = provider { yarnRootExtension.requireConfigured().reportNewYarnLock }
+            task.yarnLockAutoReplace = provider { yarnRootExtension.requireConfigured().yarnLockAutoReplace }
         }
 
         val restoreYarnLock = tasks.register("kotlinRestoreYarnLock", YarnLockCopyTask::class.java) {
