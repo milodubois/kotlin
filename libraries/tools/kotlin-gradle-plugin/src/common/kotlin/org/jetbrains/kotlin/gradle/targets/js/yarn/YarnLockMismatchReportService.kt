@@ -40,8 +40,8 @@ abstract class YarnLockMismatchReportService : BuildService<YarnLockMismatchRepo
             return
         }
 
-        if (!parameters.reportNewYarnLock.get() || parameters.outputFile.get().asFile.exists()) {
-            return
+        if (parameters.reportNewYarnLock.get() && !parameters.outputFile.get().asFile.exists()) {
+            throw GradleException(YARN_LOCK_MISMATCH_MESSAGE)
         }
 
         if (shouldFailOnClose || parameters.shouldFailOnClose.get() && !contentEquals(parameters.inputFile.get().asFile, parameters.outputFile.get().asFile)) {

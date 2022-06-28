@@ -1404,6 +1404,15 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             build("compileKotlinJs") {
                 assertTasksUpToDate(":kotlinStoreYarnLock")
             }
+
+            // check if everything ok without build/js/yarn.lock
+            build("clean") {
+                assertTasksExecuted(":clean")
+            }
+
+            build("clean") {
+                assertTasksUpToDate(":clean")
+            }
         }
     }
 
