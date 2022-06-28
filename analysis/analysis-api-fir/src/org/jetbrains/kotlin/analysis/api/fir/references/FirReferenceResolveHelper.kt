@@ -179,12 +179,10 @@ internal object FirReferenceResolveHelper {
         return if (constructorCalleeExpression.parent is KtSuperTypeCallEntry) constructorCalleeExpression else expression
     }
 
-
-    internal fun resolveSimpleNameReference(
-        ref: KtFirSimpleNameReference,
+    internal fun resolveSimpleNameReferenceExpression(
+        expression: KtSimpleNameExpression,
         analysisSession: KtFirAnalysisSession
     ): Collection<KtSymbol> {
-        val expression = ref.expression
         if (expression.isSyntheticOperatorReference()) return emptyList()
         val symbolBuilder = analysisSession.firSymbolBuilder
         val adjustedResolutionExpression = adjustResolutionExpression(expression)
@@ -212,6 +210,13 @@ internal object FirReferenceResolveHelper {
             is FirNamedArgumentExpression -> getSymbolsByNameArgumentExpression(expression, analysisSession, symbolBuilder)
             else -> handleUnknownFirElement(expression, analysisSession, session, symbolBuilder)
         }
+    }
+
+    internal fun resolveSimpleNameReference(
+        ref: KtFirSimpleNameReference,
+        analysisSession: KtFirAnalysisSession
+    ): Collection<KtSymbol> {
+        return resolveSimpleNameReferenceExpression(ref.expression, analysisSession)
     }
 
     private fun getSymbolByDelegatedConstructorCall(

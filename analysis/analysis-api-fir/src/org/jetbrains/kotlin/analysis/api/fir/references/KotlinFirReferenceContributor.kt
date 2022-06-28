@@ -5,6 +5,10 @@
 
 package org.jetbrains.kotlin.idea.references
 
+import com.intellij.psi.PsiReference
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.resolve.references.ReferenceAccess
+
 class KotlinFirReferenceContributor : KotlinReferenceProviderContributor {
     override fun registerReferenceProviders(registrar: KotlinPsiReferenceRegistrar) {
         with(registrar) {
@@ -16,6 +20,20 @@ class KotlinFirReferenceContributor : KotlinReferenceProviderContributor {
             registerProvider(factory = ::KtFirArrayAccessReference)
             registerProvider(factory = ::KtFirConstructorDelegationReference)
             registerProvider(factory = ::KtFirCollectionLiteralReference)
+
+            registerMultiProvider<KtNameReferenceExpression> { nameReferenceExpression ->
+                if (nameReferenceExpression.project.getService(ReadWriteAccessChecker::class.java) == null) {
+                    return@registerMultiProvider PsiReference.EMPTY_ARRAY
+                }
+                when (nameReferenceExpression.readWriteAccess(useResolveForReadWrite = true)) {
+                    ReferenceAccess.READ -> arrayOf(KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = true))
+                    ReferenceAccess.WRITE -> arrayOf(KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = false))
+                    ReferenceAccess.READ_WRITE -> arrayOf(
+                        KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = true),
+                        KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = false)
+                    )
+                }
+            }
         }
     }
 }
