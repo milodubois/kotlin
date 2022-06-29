@@ -45,6 +45,11 @@ abstract class YarnLockCopyTask : DefaultTask() {
             copy.into(outputDirectory)
         }
     }
+
+    companion object {
+        val STORE_YARN_LOCK_NAME = "kotlinStoreYarnLock"
+        val RESTORE_YARN_LOCK_NAME = "kotlinRestoreYarnLock"
+    }
 }
 
 abstract class YarnLockStoreTask : YarnLockCopyTask() {

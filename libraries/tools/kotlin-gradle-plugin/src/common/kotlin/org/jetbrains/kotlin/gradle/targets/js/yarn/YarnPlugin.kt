@@ -16,6 +16,8 @@ import org.jetbrains.kotlin.gradle.targets.js.npm.RequiresNpmDependencies
 import org.jetbrains.kotlin.gradle.targets.js.npm.resolver.implementing
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
 import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.RootPackageJsonTask
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockCopyTask.Companion.RESTORE_YARN_LOCK_NAME
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockCopyTask.Companion.STORE_YARN_LOCK_NAME
 import org.jetbrains.kotlin.gradle.tasks.CleanDataTask
 import org.jetbrains.kotlin.gradle.tasks.registerTask
 
@@ -85,7 +87,7 @@ open class YarnPlugin : Plugin<Project> {
         BuildEventsListenerRegistryHolder.getInstance(project).listenerRegistry
             .onTaskCompletion(service)
 
-        val storeYarnLock = tasks.register("kotlinStoreYarnLock", YarnLockStoreTask::class.java) { task ->
+        val storeYarnLock = tasks.register(STORE_YARN_LOCK_NAME, YarnLockStoreTask::class.java) { task ->
             task.dependsOn(kotlinNpmInstall)
             task.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
             task.outputDirectory.set(yarnRootExtension.lockFileDirectory)
@@ -99,12 +101,13 @@ open class YarnPlugin : Plugin<Project> {
         }
 
         tasks.register("kotlinActualizeYarnLock", YarnLockCopyTask::class.java) { task ->
+            task.dependsOn(kotlinNpmInstall)
             task.inputFile.set(nodeJs.rootPackageDir.resolve("yarn.lock"))
             task.outputDirectory.set(yarnRootExtension.lockFileDirectory)
             task.fileName.set(yarnRootExtension.lockFileName)
         }
 
-        val restoreYarnLock = tasks.register("kotlinRestoreYarnLock", YarnLockCopyTask::class.java) {
+        val restoreYarnLock = tasks.register(RESTORE_YARN_LOCK_NAME, YarnLockCopyTask::class.java) {
             val lockFile = yarnRootExtension.lockFileDirectory.resolve(yarnRootExtension.lockFileName)
             it.inputFile.set(yarnRootExtension.lockFileDirectory.resolve(yarnRootExtension.lockFileName))
             it.outputDirectory.set(nodeJs.rootPackageDir)
@@ -116,7 +119,6 @@ open class YarnPlugin : Plugin<Project> {
 
         kotlinNpmInstall.configure {
             it.dependsOn(restoreYarnLock)
-            it.finalizedBy(storeYarnLock)
         }
     }
 

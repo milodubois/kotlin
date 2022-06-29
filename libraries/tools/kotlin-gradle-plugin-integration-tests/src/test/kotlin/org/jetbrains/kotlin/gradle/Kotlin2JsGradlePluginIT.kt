@@ -909,6 +909,10 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                     }
             }
 
+            build("kotlinActualizeYarnLock") {
+                assertTasksExecuted(":kotlinActualizeYarnLock")
+            }
+
             build("jsJar") {
                 val archive = Files.list(projectPath.resolve("build").resolve("libs")).use { files ->
                     files
