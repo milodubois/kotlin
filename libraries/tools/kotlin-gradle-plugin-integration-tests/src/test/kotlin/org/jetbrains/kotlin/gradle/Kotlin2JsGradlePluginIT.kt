@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.gradle.targets.js.npm.NpmProjectModules
 import org.jetbrains.kotlin.gradle.targets.js.npm.PackageJson
 import org.jetbrains.kotlin.gradle.targets.js.npm.fromSrcPackageJson
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YARN_LOCK_MISMATCH_MESSAGE
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockCopyTask.Companion.STORE_YARN_LOCK_NAME
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockCopyTask.Companion.UPGRADE_YARN_LOCK
 import org.jetbrains.kotlin.gradle.tasks.USING_JS_INCREMENTAL_COMPILATION_MESSAGE
 import org.jetbrains.kotlin.gradle.tasks.USING_JS_IR_BACKEND_MESSAGE
 import org.jetbrains.kotlin.gradle.testbase.*
@@ -26,7 +28,6 @@ import org.jetbrains.kotlin.gradle.util.normalizePath
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.condition.DisabledIf
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.zip.ZipFile
@@ -34,7 +35,6 @@ import kotlin.io.path.*
 import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 @JsGradlePluginTests
@@ -909,8 +909,8 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
                     }
             }
 
-            build("kotlinActualizeYarnLock") {
-                assertTasksExecuted(":kotlinActualizeYarnLock")
+            build(UPGRADE_YARN_LOCK) {
+                assertTasksExecuted(":$UPGRADE_YARN_LOCK")
             }
 
             build("jsJar") {
@@ -1229,7 +1229,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
     fun testFailingWithYarnLockUpdate(gradleVersion: GradleVersion) {
         project("kotlin-js-yarn-lock-project", gradleVersion) {
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
             }
 
             projectPath.resolve("kotlin-js-store").deleteRecursively()
@@ -1244,7 +1244,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksFailed(":kotlinStoreYarnLock")
+                assertTasksFailed(":$STORE_YARN_LOCK_NAME")
             }
 
             buildGradleKts.modify {
@@ -1262,16 +1262,16 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksFailed(":kotlinStoreYarnLock")
+                assertTasksFailed(":$STORE_YARN_LOCK_NAME")
             }
 
             // yarn.lock was not updated
             buildAndFail("compileKotlinJs") {
-                assertTasksFailed(":kotlinStoreYarnLock")
+                assertTasksFailed(":$STORE_YARN_LOCK_NAME")
             }
 
-            build("kotlinActualizeYarnLock") {
-                assertTasksExecuted(":kotlinActualizeYarnLock")
+            build(UPGRADE_YARN_LOCK) {
+                assertTasksExecuted(":$UPGRADE_YARN_LOCK")
             }
 
             buildGradleKts.modify {
@@ -1286,13 +1286,13 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
-            build("kotlinActualizeYarnLock") {
-                assertTasksExecuted(":kotlinActualizeYarnLock")
+            build(UPGRADE_YARN_LOCK) {
+                assertTasksExecuted(":$UPGRADE_YARN_LOCK")
             }
 
             buildGradleKts.modify {
@@ -1310,13 +1310,13 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
-            build("kotlinActualizeYarnLock") {
-                assertTasksExecuted(":kotlinActualizeYarnLock")
+            build(UPGRADE_YARN_LOCK) {
+                assertTasksExecuted(":$UPGRADE_YARN_LOCK")
             }
 
             buildGradleKts.modify {
@@ -1331,13 +1331,13 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksUpToDate(":kotlinStoreYarnLock")
+                assertTasksUpToDate(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
@@ -1357,7 +1357,7 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputDoesNotContain(YARN_LOCK_MISMATCH_MESSAGE)
             }
@@ -1379,12 +1379,12 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksFailed(":kotlinStoreYarnLock")
+                assertTasksFailed(":$STORE_YARN_LOCK_NAME")
             }
 
             //yarn.lock was updated
             build("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
             }
 
             buildGradleKts.modify {
@@ -1399,14 +1399,14 @@ abstract class AbstractKotlin2JsGradlePluginIT(protected val irBackend: Boolean)
             }
 
             buildAndFail("compileKotlinJs") {
-                assertTasksExecuted(":kotlinStoreYarnLock")
+                assertTasksExecuted(":$STORE_YARN_LOCK_NAME")
 
                 assertOutputContains(YARN_LOCK_MISMATCH_MESSAGE)
             }
 
             //yarn.lock was updated
             build("compileKotlinJs") {
-                assertTasksUpToDate(":kotlinStoreYarnLock")
+                assertTasksUpToDate(":$STORE_YARN_LOCK_NAME")
             }
 
             // check if everything ok without build/js/yarn.lock

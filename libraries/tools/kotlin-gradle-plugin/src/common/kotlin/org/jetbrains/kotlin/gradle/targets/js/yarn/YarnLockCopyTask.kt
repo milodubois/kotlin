@@ -49,6 +49,7 @@ abstract class YarnLockCopyTask : DefaultTask() {
     companion object {
         val STORE_YARN_LOCK_NAME = "kotlinStoreYarnLock"
         val RESTORE_YARN_LOCK_NAME = "kotlinRestoreYarnLock"
+        val UPGRADE_YARN_LOCK = "kotlinUpgradeYarnLock"
     }
 }
 
