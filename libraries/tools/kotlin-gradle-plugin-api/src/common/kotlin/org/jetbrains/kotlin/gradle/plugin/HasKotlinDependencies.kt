@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.gradle.plugin
 
 import groovy.lang.Closure
+import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalModuleDependency
@@ -54,6 +55,12 @@ interface KotlinDependencyHandler {
         project(listOf("path", "configuration").zip(listOfNotNull(path, configuration)).toMap())
 
     fun project(notation: Map<String, Any?>): ProjectDependency
+
+    fun enforcedPlatform(notation: Any): Dependency =
+        project.dependencies.enforcedPlatform(notation)
+
+    fun enforcedPlatform(notation: Any, configureAction: Action<in Dependency>): Dependency =
+        project.dependencies.enforcedPlatform(notation, configureAction)
 
     @Deprecated("Declaring NPM dependency without version is forbidden")
     fun npm(name: String): Dependency
