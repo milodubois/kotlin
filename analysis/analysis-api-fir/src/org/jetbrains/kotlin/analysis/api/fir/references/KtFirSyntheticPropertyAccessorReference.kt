@@ -23,6 +23,7 @@ class KtFirSyntheticPropertyAccessorReference(
     override fun KtAnalysisSession.resolveToSymbols(): Collection<KtSymbol> {
         check(this is KtFirAnalysisSession)
         return FirReferenceResolveHelper.resolveSimpleNameReferenceExpression(expression, analysisSession = this)
+            .mapNotNull { it as? KtFirSyntheticJavaPropertySymbol }
     }
 
     override fun getResolvedToPsi(analysisSession: KtAnalysisSession): Collection<PsiElement> = with(analysisSession) {

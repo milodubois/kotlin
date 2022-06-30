@@ -22,9 +22,6 @@ class KotlinFirReferenceContributor : KotlinReferenceProviderContributor {
             registerProvider(factory = ::KtFirCollectionLiteralReference)
 
             registerMultiProvider<KtNameReferenceExpression> { nameReferenceExpression ->
-                if (nameReferenceExpression.project.getService(ReadWriteAccessChecker::class.java) == null) {
-                    return@registerMultiProvider PsiReference.EMPTY_ARRAY
-                }
                 when (nameReferenceExpression.readWriteAccess(useResolveForReadWrite = true)) {
                     ReferenceAccess.READ -> arrayOf(KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = true))
                     ReferenceAccess.WRITE -> arrayOf(KtFirSyntheticPropertyAccessorReference(nameReferenceExpression, isGetter = false))
